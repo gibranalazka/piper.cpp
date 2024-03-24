@@ -8,9 +8,13 @@
 #include <stdexcept>
 
 #ifdef _WIN32
+#define NOMINMAX
 #include <filesystem>
 #include <locale>
 #include <codecvt>
+#include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 #include <onnxruntime_cxx_api.h>
@@ -91,22 +95,26 @@ const std::string instanceName{"piper"};
 
 std::string getVersion() { return VERSION; }
 
+std::filesystem::path get_executable_path() {
+#ifdef _WIN32
+    char path[MAX_PATH] = { 0 };
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    return std::filesystem::path(path);
+#else
+    return std::filesystem::canonical("/proc/self/exe");
+#endif
+}
+
 std::filesystem::path get_share_path() {
-  // Get the canonical path of the executable or DLL file
-  auto exePath = filesystem::canonical("/proc/self/exe");
+    auto exePath = get_executable_path();
 
-  // check if we are in the correct directory
-  if (filesystem::exists(exePath.parent_path() / "share")) {
-    return exePath.parent_path() / "share";
-  } 
-  else if (filesystem::exists(exePath.parent_path().parent_path() / "share")) {
-    return exePath.parent_path().parent_path() / "share";
-  } 
-  else {
-    throw std::runtime_error("Failed to find espeak-ng data directory");
-  }
-
-  return exePath;
+    if (std::filesystem::exists(exePath.parent_path() / "share")) {
+        return exePath.parent_path() / "share";
+    } else if (std::filesystem::exists(exePath.parent_path().parent_path() / "share")) {
+        return exePath.parent_path().parent_path() / "share";
+    } else {
+        throw std::runtime_error("Failed to find data directory");
+    }
 }
 
 char* get_c_str_path(std::filesystem::path datapath) {

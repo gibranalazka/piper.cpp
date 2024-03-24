@@ -33,13 +33,16 @@ void phonemize_eSpeak(std::string text, eSpeakPhonemeConfig &config,
                                  /*buflength*/ 0,
                                  /*path*/ get_c_str_path(datapath),
                                  /*options*/ 0);
+
   if (init_result < 0) {
+    printf("Failed to initialize eSpeak-ng\n");
     throw std::runtime_error("Failed to initialize eSpeak-ng");
   }
 
   auto voice = config.locale;
   int set_result = espeak_SetVoiceByName(voice.c_str());
   if (set_result != 0) {
+    printf("Failed to set eSpeak-ng voice\n");
     throw std::runtime_error("Failed to set eSpeak-ng voice");
   }
 
