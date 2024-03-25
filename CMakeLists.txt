@@ -109,29 +109,50 @@ endif()
 # ---- espeak-ng ---
 
 if(NOT DEFINED ESPEAK_NG_DIR)
-    set(ESPEAK_NG_DIR "${CMAKE_CURRENT_BINARY_DIR}/ei")
+  set(ESPEAK_NG_DIR "${CMAKE_CURRENT_BINARY_DIR}/ei")
 
-    include(ExternalProject)
-    ExternalProject_Add(
-        espeak_ng_external
-        PREFIX "${CMAKE_CURRENT_BINARY_DIR}/e"
-        URL "https://github.com/rhasspy/espeak-ng/archive/0f65aa301e0d6bae5e172cc74197d32a6182200f.zip"
-        CMAKE_ARGS
-            -DCMAKE_INSTALL_PREFIX:PATH=${ESPEAK_NG_DIR}
-            -DUSE_ASYNC:BOOL=OFF
-            -DBUILD_SHARED_LIBS:BOOL=ON
-            -DUSE_MBROLA:BOOL=OFF
-            -DUSE_LIBSONIC:BOOL=OFF
-            -DUSE_LIBPCAUDIO:BOOL=OFF
-            -DUSE_KLATT:BOOL=OFF
-            -DUSE_SPEECHPLAYER:BOOL=OFF
-            -DEXTRA_cmn:BOOL=ON
-            -DEXTRA_ru:BOOL=ON
-            -DCMAKE_C_FLAGS="-D_FILE_OFFSET_BITS=64 -fPIC"
-            -DCMAKE_CXX_FLAGS="-fPIC"
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+  include(ExternalProject)
+
+  # Determine target architecture and adjust toolchain file and host if necessary
+  set(ESPEAK_NG_CMAKE_ARGS
+      -DCMAKE_INSTALL_PREFIX:PATH=${ESPEAK_NG_DIR}
+      -DUSE_ASYNC:BOOL=OFF
+      -DBUILD_SHARED_LIBS:BOOL=ON
+      -DUSE_MBROLA:BOOL=OFF
+      -DUSE_LIBSONIC:BOOL=OFF
+      -DUSE_LIBPCAUDIO:BOOL=OFF
+      -DUSE_KLATT:BOOL=OFF
+      -DUSE_SPEECHPLAYER:BOOL=OFF
+      -DEXTRA_cmn:BOOL=ON
+      -DEXTRA_ru:BOOL=ON
+  )
+
+  # Platform-specific settings
+  if (ANDROID_NDK)
+    message("Using Android NDK at ${ANDROID_NDK}")
+
+    list(APPEND ESPEAK_NG_CMAKE_ARGS
+      -DCMAKE_C_FLAGS="-D_FILE_OFFSET_BITS=64"
+      -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK}/build/cmake/android.toolchain.cmake"
     )
-    add_dependencies(piper espeak_ng_external)
+  else()
+    list(APPEND ESPEAK_NG_CMAKE_ARGS
+      -DCMAKE_C_FLAGS="-D_FILE_OFFSET_BITS=64 -fPIC"
+      -DCMAKE_CXX_FLAGS="-fPIC"
+      -DCMAKE_POSITION_INDEPENDENT_CODE=ON
+    )
+  endif()
+
+  # Build espeak-ng
+  ExternalProject_Add(
+    espeak_ng_external
+    PREFIX "${CMAKE_CURRENT_BINARY_DIR}/e"
+    URL "https://github.com/rhasspy/espeak-ng/archive/0f65aa301e0d6bae5e172cc74197d32a6182200f.zip"
+    CMAKE_ARGS ${ESPEAK_NG_CMAKE_ARGS}
+  )
+
+  # Create a target to depend on
+  add_dependencies(piper espeak_ng_external)
 endif()
 
 # ---- Install ----
